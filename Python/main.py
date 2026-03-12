@@ -1,14 +1,13 @@
 import os
 
-from algorithms.BSP import generate_bsp_dungeon
-from algorithms.blind_agent import generate_agent_dungeon
-from algorithms.look_ahead_agent import generate_lookahead_dungeon
-from algorithms.cellular_automata import generate_cellular_dungeon
-from algorithms.random_walk import generate_random_walk
-from algorithms.maze_generation import generate_maze
-from algorithms.hybrids.BSP_base.BSP_cellular import generate_bsp_cellular
-
+from Python.generators.default.BSP import generateBspDungeon
+from Python.generators.default.blind_agent import generateBlindDungeon
+from Python.generators.default.look_ahead_agent import generateLookaheadDungeon
+from Python.generators.default.cellular_automata import generateCellularDungeon
+from Python.generators.default.random_walk import generateRandomWalk
+from Python.generators.default.maze_generation import generateMaze
 from meta import MAPS_AMOUNT
+
 
 # Salva la mappa nella cartella "maps/" con il nome specificato
 def save_map(dungeon, filename, path = "none", default_alg = True):
@@ -42,31 +41,47 @@ if __name__ == "__main__":
     for i in range(MAPS_AMOUNT):
 
         # BSP
-        dungeon, rooms = generate_bsp_dungeon()
-        save_map(dungeon, "bsp_" + str(i) + ".txt", "bsp")
+        dungeon, rooms, seed, topo = generateBspDungeon()
+        save_map(dungeon, "bsp_" + str(seed) + ".txt", "bsp")
+        save_map(topo, "bsp_topo_" + str(seed) + ".txt", "bsp")
 
         # Blind agent
-        dungeon = generate_agent_dungeon()
-        save_map(dungeon, "agent_blind_" + str(i) + ".txt", "blind_agent")
+        dungeon, seed, topo = generateBlindDungeon()
+        save_map(dungeon, "agent_blind_" + str(seed) + ".txt", "blind_agent")
+        save_map(topo, "agent_blind_topo_" + str(seed) + ".txt", "blind_agent")
 
         # Look-ahead agent
-        dungeon = generate_lookahead_dungeon()
-        save_map(dungeon, "agent_lookahead_" + str(i) + ".txt", "lookahead_agent")
+        dungeon, seed, topo = generateLookaheadDungeon()
+        save_map(dungeon, "agent_lookahead_" + str(seed) + ".txt", "lookahead_agent")
+        save_map(topo, "agent_lookahead_topo_" + str(seed) + ".txt", "lookahead_agent")
 
         # Cellular automata
-        dungeon = generate_cellular_dungeon()
-        save_map(dungeon, "cellular_automata_" + str(i) + ".txt", "cellular_automata")
+        dungeon, seed, topo = generateCellularDungeon()
+        save_map(dungeon, "cellular_automata_" + str(seed) + ".txt", "cellular_automata")
+        save_map(topo, "cellular_automata_topo_" + str(seed) + ".txt", "cellular_automata")
 
         # Random walk
-        dungeon = generate_random_walk()
-        save_map(dungeon, "random_walk_" + str(i) + ".txt", "random_walk")
+        dungeon, seed, topo = generateRandomWalk()
+        save_map(dungeon, "random_walk_" + str(seed) + ".txt", "random_walk")
+        save_map(topo, "random_walk_topo_" + str(seed) + ".txt", "random_walk")
 
         # Maze generation
-        dungeon = generate_maze()
-        save_map(dungeon, "maze_" + str(i) + ".txt", "maze_generation")
+        dungeon, seed = generateMaze()
+        save_map(dungeon, "maze_" + str(seed) + ".txt", "maze_generation")
 
+        """
         # Hybrid: BSP + Cellular
-        dungeon = generate_bsp_cellular()
+        dungeon = generateBspCellular()
         save_map(dungeon, "bsp_cellular_" + str(i) + ".txt", path="bsp_cellular", default_alg=False)
+
+        # Hybrid: BSP + Maze
+        dungeon = generateBspMaze()
+        save_map(dungeon, "bsp_maze_" + str(i) + ".txt", path="bsp_maze", default_alg=False)
+
+        # Hybrid: Maze + Cellular
+        # utilizza il bsp quindi sfrutta il metodo generate_bsp_cellular
+        dungeon = generateMazeCellular()
+        save_map(dungeon, "maze_cellular_" + str(i) + ".txt", path="maze_cellular", default_alg=False)
+        """
 
     print("\nTutte le mappe sono state generate e salvate nella cartella 'maps/'.")

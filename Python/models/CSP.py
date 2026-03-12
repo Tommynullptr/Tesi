@@ -1,4 +1,6 @@
 from collections import deque
+from Python.meta import MIN_ROOM_SIZE, MAX_ROOM_SIZE, MIN_CORRIDOR_SIZE, MAX_CORRIDOR_SIZE, MAP_HEIGHT, MAP_WIDTH
+
 import copy
 
 
@@ -28,27 +30,23 @@ class CSP:
         return set(self.variables) <= set(assignment.keys())
 
 
-def sudokuToCsp(grid):
+def getDungeonAsCsp():
 
     variables = []
     domains = {}
     constraints = {}
 
-    # Creazione di variabili e domini (0 indica cella vuota)
-    for row in range(9):
-
-        for col in range(9):
-
-            var = (row, col)
-            variables.append(var)
-
-            if grid[row][col] == 0:
-                domains[var] = list(range(1, 10))
-
-            else:
-                # pongo il dominio uguale al valore default della cella
-                # in questo modo il solver non modifica i valori di partenza
-                domains[var] = [grid[row][col]]
+    # Creazione di variabili e domini: tutte le possibili stanze e corridoi
+    for w in range(MIN_ROOM_SIZE, MAX_ROOM_SIZE):
+        for h in range(MIN_ROOM_SIZE, MAX_ROOM_SIZE):
+            for x in range(MAP_WIDTH):
+                for y in range(MAP_HEIGHT):
+                    var = (x, y, w, h)
+                    variables.append(var)
+                    # dominio di una variabile/room:
+                    # x e y sono già fissati (compresi tra 0 e MAP_WIDTH/MAP_HEIGHT)
+                    # w e h possono essere limitati da stanze o corridoi vicini
+                    domains[var] = [(w, h) for w in range(MIN_ROOM_SIZE, MAX_ROOM_SIZE) for h in range(MIN_ROOM_SIZE, MAX_ROOM_SIZE)]
 
     # Vincolo "different cell value": due celle che non possono avere lo stesso valore
     def diffCellValueConstraint(x, y):
