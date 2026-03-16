@@ -1,13 +1,13 @@
 import random
 
-from collections import deque
 from Python.meta import MAP_WIDTH, MAP_HEIGHT, Terrain, MIN_ROOM_SIZE_FOR_LAKE, Topo
 
 
 # CA per generare terreno su un dungeon scavato
-def terrainCAFromDungeon(dungeon, topo, components, seed=None,
-                         prob_lake=0.06, lake_fraction=0.12, water_spread_threshold=3,
-                         grass_spread_threshold=2, grass_near_water_prob=0.9):
+# TODO: usare topo o no?
+def terrainCAFromDungeon(dungeon, topo, components, seed = None,
+                         prob_lake = 0.06, lake_fraction = 0.12, water_spread_threshold = 3,
+                         grass_spread_threshold = 1, grass_near_water_prob = 0.9, grass_near_grass_prob = 0.4):
     """
     Output: matrice/layer della mappa con GROUND/GRASS/WATER (terra/erba/acqua).
     Strategia:
@@ -16,7 +16,8 @@ def terrainCAFromDungeon(dungeon, topo, components, seed=None,
       - l'erba si può propagare vicino all'acqua o ad altre celle di erba
     """
     rng = random.Random(seed)
-    terrain = [[Terrain.WALL if dungeon[y][x] == Terrain.WALL else Terrain.GROUND for x in range(MAP_WIDTH)] for y in range(MAP_HEIGHT)]
+    terrain = [[Terrain.WALL if dungeon[y][x] == Terrain.WALL else Terrain.GROUND for x in range(MAP_WIDTH)]
+               for y in range(MAP_HEIGHT)]
 
     # semina laghi in stanze grandi
     for cells in components.values():
@@ -65,8 +66,14 @@ def terrainCAFromDungeon(dungeon, topo, components, seed=None,
 
         terrain = new_terrain
 
+    # macchie di erba per variare la mappa e introdurre rumore per generare macchie èiù grandi di erba
+    for y in range(MAP_HEIGHT):
+        for x in range(MAP_WIDTH):
+
+            if dungeon[y][x] == Terrain.FLOOR and terrain[y][x] == Terrain.GROUND and rng.random() < 0.01:
+                terrain[y][x] = Terrain.GRASS
+
     # propagazione erba: preferisce crescere vicino all'acqua, ma può anche diffondersi per vicinanza ad altre celle d'erba
-    # TODO: aumentare la fittosità dell'erba
     for _ in range(2):
         new_terrain = [row[:] for row in terrain]
 
@@ -88,17 +95,10 @@ def terrainCAFromDungeon(dungeon, topo, components, seed=None,
                     if water_n > 0 and rng.random() < grass_near_water_prob:
                         new_terrain[y][x] = Terrain.GRASS
 
-                    elif grass_n >= grass_spread_threshold:
+                    elif grass_n >= grass_spread_threshold and rng.random() < grass_near_grass_prob:
                         new_terrain[y][x] = Terrain.GRASS
 
         terrain = new_terrain
-
-    # macchie di erba per variare la mappa
-    for y in range(MAP_HEIGHT):
-        for x in range(MAP_WIDTH):
-
-            if dungeon[y][x] == Terrain.FLOOR and terrain[y][x] == Terrain.GROUND and rng.random() < 0.01:
-                terrain[y][x] = Terrain.GRASS
 
     return terrain
 

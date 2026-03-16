@@ -2,7 +2,7 @@ from enum import IntEnum, auto
 
 # Parametri globali
 
-MAPS_AMOUNT = 3 # numero di mappe da generare per ogni algoritmo
+MAPS_AMOUNT = 5 # numero di mappe da generare per ogni algoritmo
 
 # Dimensioni di default della mappa e posizione iniziale
 MAP_WIDTH = 160

@@ -8,7 +8,7 @@ from Python.meta import MAP_WIDTH, MAP_HEIGHT, MIN_ROOM_SIZE, Topo, Terrain
 # semplici ed efficienti (O(N)) per spawn di oggetti evitando di
 # piazzarli in luoghi non consoni come corridoi o terreno diverso; inoltre fornisce
 # contesto di area (component id) utile per posizionare elementi su stanze grandi.
-def classifyCells(dungeon, topo=None):
+def classifyCells(dungeon, topo = None):
     if topo is None:
         topo = [[Topo.FLOOR] * MAP_WIDTH for _ in range(MAP_HEIGHT)]
 
@@ -44,7 +44,34 @@ def classifyCells(dungeon, topo=None):
                     topo[y][x] = Topo.DEADEND
 
                 elif degree == 2:
-                    topo[y][x] = Topo.CORRIDOR
+                    # Trova le due celle ortogonali vicine
+                    neighbors = []
+
+                    for dir_x, dir_y in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                        new_x, new_y = x + dir_x, y + dir_y
+
+                        if 0 <= new_x < MAP_WIDTH and 0 <= new_y < MAP_HEIGHT and dungeon[new_y][new_x] == Terrain.FLOOR:
+                            neighbors.append((new_x, new_y))
+
+                    x0, y0 = neighbors[0]
+                    x1, y1 = neighbors[1]
+
+                    # vicini opposti → corridoio
+                    if x0 == x1 or y0 == y1:
+                        topo[y][x] = Topo.CORRIDOR
+
+                    else:
+                        # angolo
+                        diag_x = x0 + x1 - x
+                        diag_y = y0 + y1 - y
+
+                        if (0 <= diag_x < MAP_WIDTH and
+                                0 <= diag_y < MAP_HEIGHT and
+                                dungeon[diag_y][diag_x] == Terrain.FLOOR):
+                            topo[y][x] = Topo.FLOOR
+
+                        else:
+                            topo[y][x] = Topo.CORRIDOR
 
                 else:
                     topo[y][x] = Topo.JUNCTION

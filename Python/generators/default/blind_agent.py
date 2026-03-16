@@ -6,7 +6,7 @@ from Python.generators.terrain.terrain_CA import terrainCAFromDungeon, terrainTo
 from Python.meta import MAP_WIDTH, MAP_HEIGHT, MIN_ROOM_SIZE, MAX_ROOM_SIZE, Terrain, START
 
 
-def generateBlindDungeon(seed=None):
+def generateBlindDungeon(seed = None):
     if seed is None:
         seed = random.randint(0, 2**32 - 1) # genera un seed casuale se non è stato fornito
 
