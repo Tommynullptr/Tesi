@@ -27,6 +27,7 @@ class Node:
 
         horizontal_split = random.choice([True, False])
 
+        # nel caso in cui abbia un'area sbilanciata forzo un certo tipo di taglio
         if self.w > self.h and self.w / self.h >= 1.25:
             horizontal_split = False
 
@@ -52,9 +53,7 @@ class Node:
         return True
 
     def createRooms(self):
-
         if self.left or self.right:
-
             if self.left:
                 self.left.createRooms()
 

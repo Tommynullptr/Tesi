@@ -17,7 +17,22 @@ def classifyCells(dungeon, topo = None):
     # usato per classificare dead-end (1), corridoio (2), junction (3+)
     directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 
-    # computa il grado di ogni cella di pavimento contando quante celle adiacenti
+    def openess(x, y):
+        count_8_deg = 0
+
+        for direction_x in [-1, 0, 1]:
+            for direction_y in [-1, 0, 1]:
+                if direction_x == 0 and direction_y == 0:
+                    continue
+
+                new_x, new_y = x + direction_x, y + direction_y
+
+                if 0 <= new_x < MAP_WIDTH and 0 <= new_y < MAP_HEIGHT and dungeon[new_y][new_x] == Terrain.FLOOR:
+                    count_8_deg += 1
+
+        return count_8_deg
+
+    # computa il grado di ogni cella di pavimento contando quante celle ortogonalmente adiacenti
     # sono anch'esse pavimento; questo grado è usato per classificare le celle
     for y in range(MAP_HEIGHT):
         for x in range(MAP_WIDTH):
@@ -88,7 +103,7 @@ def classifyCells(dungeon, topo = None):
         for x in range(MAP_WIDTH):
 
             if dungeon[y][x] == Terrain.FLOOR and component_id[y][x] == -1:
-                queue = deque([(x, y)]) # BFS
+                queue = deque([(x, y)]) # BFS, inserisco nella coda per classificare le celle vicine
                 component_id[y][x] = counter_id
                 cells = [(x, y)]
 
@@ -100,7 +115,8 @@ def classifyCells(dungeon, topo = None):
 
                         if (0 <= new_x < MAP_WIDTH and 0 <= new_y < MAP_HEIGHT and
                                 dungeon[new_y][new_x] == Terrain.FLOOR and component_id[new_y][new_x] == -1 and 
-                                topo[new_y][new_x] != Topo.CORRIDOR and topo[new_y][new_x] != Topo.DEADEND):
+                                topo[new_y][new_x] != Topo.CORRIDOR and topo[new_y][new_x] != Topo.DEADEND and
+                                openess(new_x, new_y) > 2):
                             component_id[new_y][new_x] = counter_id
                             queue.append((new_x, new_y))
                             cells.append((new_x, new_y))
@@ -130,7 +146,10 @@ def classifyCells(dungeon, topo = None):
         # criterio robusto: una stanza riempie bene la sua bounding box
         # tra 0.5 e 0.6 -> una stanza deve riempire almeno la metà della box, i corridoi devono occupare meno
         # è una soglia naturale, è difficile che corridoi occupino più della metà
-        if fill_ratio > 0.5:
+        if fill_ratio > 0.2: # euristica!! la soglia la voglio circa uguale a
+            # quello che sarebbe il rapporto 1 fratto fattore di irregolarità che è il fill ratio stesso,
+            # quindi il fattore di irregolarità è il rapporto tra bounding box e la grandezza effettiva della componente
+            # TODO: eventualmente correggere la matematica qui ed aggiungere valore a meta.py
             for (x, y) in cells:
                 topo[y][x] = Topo.ROOM
 

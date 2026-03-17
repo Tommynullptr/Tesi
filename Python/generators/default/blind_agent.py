@@ -3,7 +3,7 @@ import random
 from Python.generators.objects.place_objects import placeObjectsOnTerrain
 from Python.generators.topology.classify_cells import classifyCells, topoToAscii
 from Python.generators.terrain.terrain_CA import terrainCAFromDungeon, terrainToAscii
-from Python.meta import MAP_WIDTH, MAP_HEIGHT, MIN_ROOM_SIZE, MAX_ROOM_SIZE, Terrain, START
+from Python.meta import MAP_WIDTH, MAP_HEIGHT, MIN_ROOM_SIZE, MAX_ROOM_SIZE, Terrain, START, PROB_ROOM, PROB_CORRIDOR, TARGET_FLOOR
 
 
 def generateBlindDungeon(seed = None):
@@ -14,8 +14,8 @@ def generateBlindDungeon(seed = None):
     dungeon = [[Terrain.WALL for _ in range(MAP_WIDTH)] for _ in range(MAP_HEIGHT)]
 
     # Probabilità iniziali
-    prob_corridor = 5   # Prob. di cambiare direzione (corridoio)
-    prob_room = 5   # Prob. di creare una stanza
+    prob_corridor = PROB_CORRIDOR   # Prob. di cambiare direzione (corridoio)
+    prob_room = PROB_ROOM   # Prob. di creare una stanza
 
     # Direzioni possibili
     directions = [(1,0), (-1,0), (0,1), (0,-1)]
@@ -31,16 +31,16 @@ def generateBlindDungeon(seed = None):
 
     # funzione per creare una stanza
     def createRoom(center_x, center_y):
-        w = random.randint(MIN_ROOM_SIZE, MAX_ROOM_SIZE)
-        h = random.randint(MIN_ROOM_SIZE, MAX_ROOM_SIZE)
+        room_width = random.randint(MIN_ROOM_SIZE, MAX_ROOM_SIZE)
+        room_height = random.randint(MIN_ROOM_SIZE, MAX_ROOM_SIZE)
 
-        for i in range(center_x - w//2, center_x + w//2 + 1): # scorro sulla larghezza della stanza
-            for j in range(center_y - h//2, center_y + h//2 + 1): # scorro sull'altezza della stanza
+        for i in range(center_x - room_width//2, center_x + room_width//2 + 1): # scorro sulla larghezza della stanza
+            for j in range(center_y - room_height//2, center_y + room_height//2 + 1): # scorro sull'altezza della stanza
                 if 0 <= i < MAP_WIDTH and 0 <= j < MAP_HEIGHT:
                     dungeon[j][i] = Terrain.FLOOR
 
     # condizione di stop: numero minimo di celle scavate
-    target_floor = (MAP_WIDTH * MAP_HEIGHT) // 2
+    target_floor = TARGET_FLOOR
     dug = 0
 
     while dug < target_floor:
@@ -66,7 +66,7 @@ def generateBlindDungeon(seed = None):
             prob_room = 0
 
         else:
-            prob_room += 5
+            prob_room += 1
 
         # muovo l'agente
         agent_x += destination_x

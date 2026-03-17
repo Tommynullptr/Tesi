@@ -33,6 +33,16 @@ def placeObjectsOnTerrain(terrain, topo, seed=None, params=None):
     def grid_coords(x,y, cell_size):
         return x // cell_size, y // cell_size
 
+    def nearbyCorridor(x, y):
+        for direction_x, direction_y in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+            new_x, new_y = x + direction_x, y + direction_y
+
+            if 0 <= new_x < MAP_WIDTH and 0 <= new_y < MAP_HEIGHT:
+                if topo[new_y][new_x] == Topo.CORRIDOR:
+                    return True
+
+        return False
+
     for y in range(MAP_HEIGHT):
         for x in range(MAP_WIDTH):
             
@@ -61,7 +71,7 @@ def placeObjectsOnTerrain(terrain, topo, seed=None, params=None):
 
                     if nearby: break
 
-                if not nearby:
+                if not nearby and not nearbyCorridor(x, y):
                     tree_occurrency[tree_grid_y][tree_grid_x] = ('tree', x, y)
                     objects.append({'x':x,'y':y,'type':'tree'})
 

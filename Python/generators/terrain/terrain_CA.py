@@ -4,7 +4,6 @@ from Python.meta import MAP_WIDTH, MAP_HEIGHT, Terrain, MIN_ROOM_SIZE_FOR_LAKE, 
 
 
 # CA per generare terreno su un dungeon scavato
-# TODO: usare topo o no?
 def terrainCAFromDungeon(dungeon, topo, components, seed = None,
                          prob_lake = 0.06, lake_fraction = 0.12, water_spread_threshold = 3,
                          grass_spread_threshold = 1, grass_near_water_prob = 0.9, grass_near_grass_prob = 0.4):
@@ -45,7 +44,8 @@ def terrainCAFromDungeon(dungeon, topo, components, seed = None,
                 terrain[ly][lx] = Terrain.WATER
 
     # propagazione acqua: una cella di pavimento diventa acqua se ha abbastanza vicini acqua (regola locale)
-    # con poche iterazioni per evitare di coprire troppo
+    # con poche iterazioni per evitare di allagare tutto
+    # l'acqua non deve propagarsi vicino ai muri o ai corridoi per non bloccare la mappa
     for _ in range(3):
         new_terrain = [row[:] for row in terrain]
 
@@ -54,19 +54,26 @@ def terrainCAFromDungeon(dungeon, topo, components, seed = None,
 
                 if dungeon[y][x] == Terrain.FLOOR and terrain[y][x] != Terrain.WATER:
                     water_neighbors = 0
+                    near_wall_or_corridor = False
 
                     for direction_x,direction_y in [(-1,0),(1,0),(0,-1),(0,1),(-1,-1),(1,1),(-1,1),(1,-1)]:
                         new_x, new_y = x+direction_x, y+direction_y
 
-                        if 0 <= new_x < MAP_WIDTH and 0 <= new_y < MAP_HEIGHT and terrain[new_y][new_x] == Terrain.WATER:
-                            water_neighbors += 1
+                        if 0 <= new_x < MAP_WIDTH and 0 <= new_y < MAP_HEIGHT:
+                            if terrain[new_y][new_x] == Terrain.WATER:
+                                water_neighbors += 1
 
-                    if water_neighbors >= water_spread_threshold and rng.random() < 0.9:
+                            if dungeon[new_y][new_x] == Terrain.WALL or topo[new_y][new_x] == Topo.CORRIDOR:
+                                near_wall_or_corridor = True
+                                break
+
+                    if (water_neighbors >= water_spread_threshold and rng.random() < 0.9 and
+                            topo[y][x] != Topo.CORRIDOR and not near_wall_or_corridor):
                         new_terrain[y][x] = Terrain.WATER
 
         terrain = new_terrain
 
-    # macchie di erba per variare la mappa e introdurre rumore per generare macchie èiù grandi di erba
+    # macchie di erba per variare la mappa e introdurre rumore per generare macchie più grandi di erba
     for y in range(MAP_HEIGHT):
         for x in range(MAP_WIDTH):
 
