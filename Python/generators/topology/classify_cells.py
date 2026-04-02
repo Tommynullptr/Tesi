@@ -1,6 +1,6 @@
 from collections import deque
 
-from Python.meta import MAP_WIDTH, MAP_HEIGHT, MIN_ROOM_SIZE, Topo, Terrain
+from Python.meta import Topo, Terrain
 
 
 # Classificazione topologica (TOPO) usata per decisioni mirate sul popolamento del terreno:
@@ -8,11 +8,19 @@ from Python.meta import MAP_WIDTH, MAP_HEIGHT, MIN_ROOM_SIZE, Topo, Terrain
 # semplici ed efficienti (O(N)) per spawn di oggetti evitando di
 # piazzarli in luoghi non consoni come corridoi o terreno diverso; inoltre fornisce
 # contesto di area (component id) utile per posizionare elementi su stanze grandi.
-def classifyCells(dungeon, topo = None):
+def classify_cells(dungeon, config, topo = None, maze = False):
+    
+    if maze:
+        map_w = config["maze_width"]
+        map_h = config["maze_height"]
+    else:
+        map_w = config["map_width"]
+        map_h = config["map_height"]
+    
     if topo is None:
-        topo = [[Topo.FLOOR] * MAP_WIDTH for _ in range(MAP_HEIGHT)]
+        topo = [[Topo.FLOOR] * map_w for _ in range(map_h)]
 
-    deg = [[0] * MAP_WIDTH for _ in range(MAP_HEIGHT)]  # degree of floor cell in 4-neighborhood
+    deg = [[0] * map_w for _ in range(map_h)]  # degree of floor cell in 4-neighborhood
     # il grado di una cella è il numero di celle adiacenti che sono pavimento;
     # usato per classificare dead-end (1), corridoio (2), junction (3+)
     directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
@@ -27,15 +35,16 @@ def classifyCells(dungeon, topo = None):
 
                 new_x, new_y = x + direction_x, y + direction_y
 
-                if 0 <= new_x < MAP_WIDTH and 0 <= new_y < MAP_HEIGHT and dungeon[new_y][new_x] == Terrain.FLOOR:
+                if (0 <= new_x < map_w and 0 <= new_y < map_h and
+                        dungeon[new_y][new_x] == Terrain.FLOOR):
                     count_8_deg += 1
 
         return count_8_deg
 
     # computa il grado di ogni cella di pavimento contando quante celle ortogonalmente adiacenti
     # sono anch'esse pavimento; questo grado è usato per classificare le celle
-    for y in range(MAP_HEIGHT):
-        for x in range(MAP_WIDTH):
+    for y in range(map_h):
+        for x in range(map_w):
 
             if dungeon[y][x] == Terrain.FLOOR:
                 count_floor = 0
@@ -43,14 +52,15 @@ def classifyCells(dungeon, topo = None):
                 for direction_x, direction_y in directions:
                     new_x, new_y = x + direction_x, y + direction_y
 
-                    if 0 <= new_x < MAP_WIDTH and 0 <= new_y < MAP_HEIGHT and dungeon[new_y][new_x] == Terrain.FLOOR:
+                    if (0 <= new_x < map_w and 0 <= new_y < map_h and
+                            dungeon[new_y][new_x] == Terrain.FLOOR):
                         count_floor += 1
 
                 deg[y][x] = count_floor  # conto quanto floor ho attorno (degree di una cella)
 
     # segna deadend, corridor, junction attraverso deg
-    for y in range(MAP_HEIGHT):
-        for x in range(MAP_WIDTH):
+    for y in range(map_h):
+        for x in range(map_w):
 
             if dungeon[y][x] == Terrain.FLOOR:
                 degree = deg[y][x]
@@ -65,7 +75,8 @@ def classifyCells(dungeon, topo = None):
                     for dir_x, dir_y in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
                         new_x, new_y = x + dir_x, y + dir_y
 
-                        if 0 <= new_x < MAP_WIDTH and 0 <= new_y < MAP_HEIGHT and dungeon[new_y][new_x] == Terrain.FLOOR:
+                        if (0 <= new_x < map_w and 0 <= new_y < map_h and
+                                dungeon[new_y][new_x] == Terrain.FLOOR):
                             neighbors.append((new_x, new_y))
 
                     x0, y0 = neighbors[0]
@@ -80,8 +91,8 @@ def classifyCells(dungeon, topo = None):
                         diag_x = x0 + x1 - x
                         diag_y = y0 + y1 - y
 
-                        if (0 <= diag_x < MAP_WIDTH and
-                                0 <= diag_y < MAP_HEIGHT and
+                        if (0 <= diag_x < map_w and
+                                0 <= diag_y < map_h and
                                 dungeon[diag_y][diag_x] == Terrain.FLOOR):
                             topo[y][x] = Topo.FLOOR
 
@@ -95,12 +106,12 @@ def classifyCells(dungeon, topo = None):
                 topo[y][x] = None  # wall
 
     # identifica componenti connesse di pavimento usando BFS e assegna un id a ciascuna componente
-    component_id = [[-1] * MAP_WIDTH for _ in range(MAP_HEIGHT)]
+    component_id = [[-1] * map_w for _ in range(map_h)]
     counter_id = 0
     components = {}
 
-    for y in range(MAP_HEIGHT):
-        for x in range(MAP_WIDTH):
+    for y in range(map_h):
+        for x in range(map_w):
 
             if dungeon[y][x] == Terrain.FLOOR and component_id[y][x] == -1:
                 queue = deque([(x, y)]) # BFS, inserisco nella coda per classificare le celle vicine
@@ -113,10 +124,11 @@ def classifyCells(dungeon, topo = None):
                     for direction_x, direction_y in directions:
                         new_x, new_y = cell_x + direction_x, cell_y + direction_y
 
-                        if (0 <= new_x < MAP_WIDTH and 0 <= new_y < MAP_HEIGHT and
+                        if (0 <= new_x < map_w and 0 <= new_y < map_h and
                                 dungeon[new_y][new_x] == Terrain.FLOOR and component_id[new_y][new_x] == -1 and 
                                 topo[new_y][new_x] != Topo.CORRIDOR and topo[new_y][new_x] != Topo.DEADEND and
                                 openess(new_x, new_y) > 2):
+
                             component_id[new_y][new_x] = counter_id
                             queue.append((new_x, new_y))
                             cells.append((new_x, new_y))
@@ -125,10 +137,12 @@ def classifyCells(dungeon, topo = None):
                 counter_id += 1
 
     # Riconoscimento stanze tramite bounding box e fill ratio
+    rooms = []
+
     for _, cells in components.items():
         component_size = len(cells)
         
-        if component_size < MIN_ROOM_SIZE:
+        if component_size < config["min_room_size"]:
             continue  # troppo piccola per essere stanza
 
         # bounding box della componente
@@ -150,18 +164,28 @@ def classifyCells(dungeon, topo = None):
             # quello che sarebbe il rapporto 1 fratto fattore di irregolarità che è il fill ratio stesso,
             # quindi il fattore di irregolarità è il rapporto tra bounding box e la grandezza effettiva della componente
             # TODO: eventualmente correggere la matematica qui ed aggiungere valore a meta.py
+            rooms.append(cells)
+
             for (x, y) in cells:
                 topo[y][x] = Topo.ROOM
 
-    return topo, components
+    return topo, components, rooms
 
 # Utility: conversione per visualizzazione nei file testuali
-def topoToAscii(topo):
+def topo_to_ascii(topo, config, maze = False):
+
+    if maze:
+        map_w = config["maze_width"]
+        map_h = config["maze_height"]
+    else:
+        map_w = config["map_width"]
+        map_h = config["map_height"]
+
     rows = []
 
-    for y in range(MAP_HEIGHT):
+    for y in range(map_h):
         row = []
-        for x in range(MAP_WIDTH):
+        for x in range(map_w):
             t = topo[y][x]
 
             if t == Topo.ROOM:

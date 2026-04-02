@@ -1,9 +1,12 @@
 import random
+import copy
 
-from Python.generators.terrain.terrain_CA import terrainCAFromDungeon, terrainToAscii
-from Python.generators.objects.place_objects import placeObjectsOnTerrain
-from Python.generators.topology.classify_cells import classifyCells, topoToAscii
-from Python.meta import MAP_WIDTH, MAP_HEIGHT, MIN_NODE_SIZE, MAX_NODE_SIZE, Terrain
+from Python.generators.terrain.terrain_CA import terrain_CA_from_dungeon, terrain_to_ascii
+from Python.generators.objects.place_objects import place_objects_on_terrain
+from Python.generators.topology.classify_cells import classify_cells, topo_to_ascii
+from Python.measures.measures import Measures
+from Python.measures.postprocess import post_process_measures
+from Python.meta import Terrain
 
 
 # Nodo dell’albero BSP
@@ -20,7 +23,7 @@ class Node:
 
     # ritorna False se il nodo è già diviso o troppo piccolo per essere diviso ulteriormente,
     # altrimenti divide il nodo in due e ritorna True
-    def split(self):
+    def split(self, config):
         
         if self.left or self.right:
             return False
@@ -35,11 +38,11 @@ class Node:
             horizontal_split = True
 
         # calcola il punto di split in modo che entrambe le parti siano almeno MIN_NODE_SIZE
-        max_split = (self.h if horizontal_split else self.w) - MIN_NODE_SIZE
-        if max_split <= MIN_NODE_SIZE:
+        max_split = (self.h if horizontal_split else self.w) - config["min_node_size"]
+        if max_split <= config["min_node_size"]:
             return False
 
-        split = random.randint(MIN_NODE_SIZE, max_split)
+        split = random.randint(config["min_node_size"], max_split) # TODO: max split potrebbe essere un altro parametro
 
         # definisci due nuovi nodi figli in base al punto di split e alla direzione di split
         if horizontal_split:
@@ -52,33 +55,44 @@ class Node:
 
         return True
 
-    def createRooms(self):
+    def create_rooms(self, config):
         if self.left or self.right:
             if self.left:
-                self.left.createRooms()
+                self.left.create_rooms(config)
 
             if self.right:
-                self.right.createRooms()
+                self.right.create_rooms(config)
 
             # Corridoio tra stanze/figli
             if self.left and self.right:
-                room1 = self.left.getRoom()
-                room2 = self.right.getRoom()
+                room1 = self.left.get_room()
+                room2 = self.right.get_room()
 
                 if room1 and room2:
-                    self.createCorridor(room1, room2)
+                    self.create_corridor(room1, room2)
 
         else:
             # Crea stanza relativa al nodo
             # room_x e room_y sono le coordinate del punto in alto a sinistra della stanza
-            room_w = random.randint(5, self.w - 2)
-            room_h = random.randint(5, self.h - 2)
+            # TODO: se le stanze si rompono qui potrebbe esserci un problema
+            min_size = config["min_room_size"]
+
+            max_w = min(self.w - 2, config["max_room_size"])
+            max_h = min(self.h - 2, config["max_room_size"])
+
+            if max_w < min_size or max_h < min_size:
+                self.room = None
+                return
+
+            room_w = random.randint(min_size, max_w)
+            room_h = random.randint(min_size, max_h)
+
             room_x = random.randint(self.x + 1, self.x + self.w - room_w - 1)
             room_y = random.randint(self.y + 1, self.y + self.h - room_h - 1)
 
             self.room = (room_x, room_y, room_w, room_h)
 
-    def getRoom(self):
+    def get_room(self):
 
         if self.room:
             return self.room
@@ -87,13 +101,13 @@ class Node:
             rooms = []
 
             if self.left:
-                r = self.left.getRoom()
+                r = self.left.get_room()
 
                 if r:
                     rooms.append(r)
 
             if self.right:
-                r = self.right.getRoom()
+                r = self.right.get_room()
 
                 if r:
                     rooms.append(r)
@@ -101,7 +115,7 @@ class Node:
             # se ci sono più stanze nei figli, ne scelgo una a caso da restituire
             return random.choice(rooms) if rooms else None
 
-    def createCorridor(self, room1, room2):
+    def create_corridor(self, room1, room2):
         # Scegli un punto casuale in ciascuna stanza sia per x che per y
         # room[0] = x, room[1] = y, room[2] = width, room[3] = height
         x1 = random.randint(room1[0], room1[0] + room1[2] - 1)
@@ -121,38 +135,41 @@ class Node:
             self.corridors.append(((x1, y2), (x2, y2)))
 
 # Utility
-def collectAllNodes(node, out):
+def collect_all_nodes(node, out):
     out.append(node)
 
     if node.left:
-        collectAllNodes(node.left, out)
+        collect_all_nodes(node.left, out)
 
     if node.right:
-        collectAllNodes(node.right, out)
+        collect_all_nodes(node.right, out)
 
-def collectRooms(node, out):
+def collect_rooms(node, out):
     if node.room:
         out.append(node.room)
 
     if node.left:
-        collectRooms(node.left, out)
+        collect_rooms(node.left, out)
 
     if node.right:
-        collectRooms(node.right, out)
+        collect_rooms(node.right, out)
 
 
 # Funzione principale per generare il dungeon BSP
-def generateBspDungeon(dungeon = None, seed = None):
+def generate_bsp_dungeon(config, dungeon = None, seed = None):
     if seed is None:
         seed = random.randint(0, 2 ** 32 - 1)
 
     random.seed(seed)
 
-    root = Node(0, 0, MAP_WIDTH, MAP_HEIGHT)
+    m = Measures (seed = seed, label = "bsp_measures_" + str(seed), input_params = copy.deepcopy(config))
+    m.start_wall()
+
+    root = Node(0, 0, config["map_width"], config["map_height"])
     nodes = [root]
 
     if not dungeon:
-        dungeon = [[Terrain.WALL for _ in range(MAP_WIDTH)] for _ in range(MAP_HEIGHT)]
+        dungeon = [[Terrain.WALL for _ in range(config["map_width"])] for _ in range(config["map_height"])]
 
     # Divisione ricorsiva
     did_split = True
@@ -162,8 +179,8 @@ def generateBspDungeon(dungeon = None, seed = None):
         new_nodes = []
 
         for node in nodes:
-            if node.w > MAX_NODE_SIZE or node.h > MAX_NODE_SIZE or random.random() > 0.8:
-                if node.split():
+            if node.w > config["max_node_size"] or node.h > config["max_node_size"]: # or random.random() > 0.8:
+                if node.split(config):
                     new_nodes.append(node.left)
                     new_nodes.append(node.right)
                     did_split = True
@@ -176,44 +193,59 @@ def generateBspDungeon(dungeon = None, seed = None):
 
         nodes = new_nodes
 
-    # Creazione stanze e corridoi una volta che l'albero è stato costruito
-    root.createRooms()
+    with m.time_phase("dungeon_generation"):
+        # Creazione stanze e corridoi una volta che l'albero è stato costruito
+        root.create_rooms(config)
 
-    # Disegna stanze
-    for node in nodes:
-        if node.room:
-            room_x, room_y, room_w, room_h = node.room
-            for i in range(room_x, room_x + room_w):
-                for j in range(room_y, room_y + room_h):
-                    dungeon[j][i] = Terrain.FLOOR
+        # Disegna stanze
+        for node in nodes:
+            if node.room:
+                room_x, room_y, room_w, room_h = node.room
+                for i in range(room_x, room_x + room_w):
+                    for j in range(room_y, room_y + room_h):
+                        dungeon[j][i] = Terrain.FLOOR
 
-    # Disegna corridoi
-    def drawCorridor(p1, p2):
-        x1, y1 = p1
-        x2, y2 = p2
-        if x1 == x2:
-            for y in range(min(y1, y2), max(y1, y2) + 1):
-                dungeon[y][x1] = Terrain.FLOOR
-        elif y1 == y2:
-            for x in range(min(x1, x2), max(x1, x2) + 1):
-                dungeon[y1][x] = Terrain.FLOOR
+        # Disegna corridoi
+        def draw_corridor(p1, p2):
+            x1, y1 = p1
+            x2, y2 = p2
+            if x1 == x2:
+                for y in range(min(y1, y2), max(y1, y2) + 1):
+                    dungeon[y][x1] = Terrain.FLOOR
+            elif y1 == y2:
+                for x in range(min(x1, x2), max(x1, x2) + 1):
+                    dungeon[y1][x] = Terrain.FLOOR
 
-    # Disegna corridoi per TUTTI i nodi
-    all_nodes = []
-    collectAllNodes(root, all_nodes)
+        # Disegna corridoi per TUTTI i nodi
+        all_nodes = []
+        collect_all_nodes(root, all_nodes)
 
-    for node in all_nodes:
-        for c in node.corridors:
-            drawCorridor(*c)
+        for node in all_nodes:
+            for c in node.corridors:
+                draw_corridor(*c)
 
     # ritorna la lista di tutte le stanze (x, y, w, h) per eventuali usi futuri
     rooms = []
-    collectRooms(root, rooms)
+    collect_rooms(root, rooms)
 
-    topo, components = classifyCells(dungeon)
-    terrain = terrainCAFromDungeon(dungeon, topo, components, seed = seed)
-    objects = placeObjectsOnTerrain(terrain, topo)
-    ascii_map = terrainToAscii(dungeon, terrain, objects)
-    ascii_topo = topoToAscii(topo)
+    with m.time_phase("classify_cells"):
+        topo, components, rooms = classify_cells(dungeon, config)
+    with m.time_phase("terrain_generation"):
+        terrain = terrain_CA_from_dungeon(dungeon, topo, components, config, seed = seed)
+    with m.time_phase("objects_generation"):
+        objects = place_objects_on_terrain(terrain, topo, config)
+    ascii_map = terrain_to_ascii(dungeon, terrain, objects, config)
+    ascii_topo = topo_to_ascii(topo, config)
 
-    return ascii_map, rooms, seed, ascii_topo
+    m.end_wall()
+
+    m.set_meta("dungeon", dungeon)
+    m.set_meta("topo", topo)
+    m.set_meta("components", components)
+    m.set_meta("terrain", terrain)
+    m.set_meta("objects", objects)
+    m.set_meta("rooms", rooms)
+
+    post_process_measures(m, config)
+
+    return ascii_map, rooms, seed, ascii_topo, m

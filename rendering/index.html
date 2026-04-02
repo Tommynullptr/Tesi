@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Map Renderer</title>
+</head>
+
+<body>
+
+<canvas id="map" width="1024" height="512"></canvas>
+
+<select id="map-select">
+  <option value="maps/bsp_125264467.json">Mappa 1</option>
+  <option value="maps/bsp_482349738.json">Mappa 2</option>
+    <option value="maps/blind_186574954.json">Mappa 3</option>
+</select>
+
+<button id="btn-load">Carica mappa</button>
+
+<div>
+  <button id="btn-final">Mostra finale</button>
+  <button id="btn-animate">Anima step</button>
+</div>
+
+<script src="rendering.js"></script>
+
+</body>
+</html>

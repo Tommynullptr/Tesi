@@ -1,9 +1,9 @@
 import random
 
-from Python.meta import MAP_WIDTH, MAP_HEIGHT, Terrain, Topo
+from Python.meta import Terrain, Topo
 
 
-def placeObjectsOnTerrain(terrain, topo, seed=None, params=None):
+def place_objects_on_terrain(terrain, topo, config, seed=None, params=None, maze = False):
     """
     Piazza alberi su erba e rocce/scogli su acqua.
     Evita di piazzare oggeti su corridoi e deadend.
@@ -11,6 +11,13 @@ def placeObjectsOnTerrain(terrain, topo, seed=None, params=None):
     Utilizza occupancy grid per lo spacing tra oggetti.
     """
     rng = random.Random(seed)
+    
+    if maze:
+        map_w = config["maze_width"]
+        map_h = config["maze_height"]
+    else:
+        map_w = config["map_width"]
+        map_h = config["map_height"]
 
     if params is None:
         params = {'prob_tree': 0.15, 'prob_rock': 0.05, 'prob_chest': 0.1,
@@ -18,14 +25,14 @@ def placeObjectsOnTerrain(terrain, topo, seed=None, params=None):
 
     # grid per gli alberi
     tree_cell_size = max(1, params['tree_spacing'])
-    tree_grid_width = (MAP_WIDTH + tree_cell_size - 1) // tree_cell_size
-    tree_grid_height = (MAP_HEIGHT + tree_cell_size - 1) // tree_cell_size
+    tree_grid_width = (map_w + tree_cell_size - 1) // tree_cell_size
+    tree_grid_height = (map_h + tree_cell_size - 1) // tree_cell_size
     tree_occurrency = [[None] * tree_grid_width for _ in range(tree_grid_height)]
 
     # grid per le rocce
     rock_cell_size = max(1, params['rock_spacing'])
-    rock_grid_width = (MAP_WIDTH + rock_cell_size - 1) // rock_cell_size
-    rock_grid_height = (MAP_HEIGHT + rock_cell_size - 1) // rock_cell_size
+    rock_grid_width = (map_w + rock_cell_size - 1) // rock_cell_size
+    rock_grid_height = (map_h + rock_cell_size - 1) // rock_cell_size
     rock_occurrency = [[None] * rock_grid_width for _ in range(rock_grid_height)]
 
     objects = []
@@ -33,18 +40,18 @@ def placeObjectsOnTerrain(terrain, topo, seed=None, params=None):
     def grid_coords(x,y, cell_size):
         return x // cell_size, y // cell_size
 
-    def nearbyCorridor(x, y):
+    def nearby_corridor(x, y):
         for direction_x, direction_y in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
             new_x, new_y = x + direction_x, y + direction_y
 
-            if 0 <= new_x < MAP_WIDTH and 0 <= new_y < MAP_HEIGHT:
+            if 0 <= new_x < map_w and 0 <= new_y < map_h:
                 if topo[new_y][new_x] == Topo.CORRIDOR:
                     return True
 
         return False
 
-    for y in range(MAP_HEIGHT):
-        for x in range(MAP_WIDTH):
+    for y in range(map_h):
+        for x in range(map_w):
             
             t = terrain[y][x]
             topo_val = topo[y][x]
@@ -71,7 +78,7 @@ def placeObjectsOnTerrain(terrain, topo, seed=None, params=None):
 
                     if nearby: break
 
-                if not nearby and not nearbyCorridor(x, y):
+                if not nearby and not nearby_corridor(x, y):
                     tree_occurrency[tree_grid_y][tree_grid_x] = ('tree', x, y)
                     objects.append({'x':x,'y':y,'type':'tree'})
 

@@ -1,7 +1,8 @@
 from enum import IntEnum
 
 # Parametri globali
-MAPS_AMOUNT = 10 # numero di mappe da generare per ogni algoritmo
+MAPS_AMOUNT = 60
+# numero di mappe da generare per ogni algoritmo
 MAP_WIDTH = 160
 MAP_HEIGHT = 100
 START = (MAP_WIDTH // 2, MAP_HEIGHT // 2) # posizione iniziale
